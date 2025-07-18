@@ -1,5 +1,7 @@
 # Video to GIF Converter
 
+![Don't forget to flap your arms](./example.gif)
+
 A comprehensive bash script that converts video files to optimized GIFs using ffmpeg and gifsicle.
 
 - [Video to GIF Converter](#video-to-gif-converter)

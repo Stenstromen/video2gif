@@ -1,4 +1,5 @@
 *.tar.gz
 *.gif
+!example.gif
 *.mp4
 *.mov

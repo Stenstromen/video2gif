@@ -149,7 +149,7 @@ jobs:
           cat > "${FORMULA_PATH}" << EOF
           # typed: false
           # frozen_string_literal: true
-          class Video2Gif < Formula
+          class Video2gif < Formula
             desc "A comprehensive bash script that converts video files to optimized GIFs using ffmpeg and gifsicle"
             homepage "${REPO_URL}"
             version "${VERSIONTAG}"

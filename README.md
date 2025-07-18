@@ -5,6 +5,8 @@ A comprehensive bash script that converts video files to optimized GIFs using ff
 - [Video to GIF Converter](#video-to-gif-converter)
   - [Features](#features)
   - [Prerequisites](#prerequisites)
+  - [Installation via Homebrew (MacOS/Linux (x86\_64) - x86\_64/arm64)](#installation-via-homebrew-macoslinux-x86_64---x86_64arm64)
+  - [Download the script](#download-the-script)
   - [Usage](#usage)
     - [Required Arguments](#required-arguments)
     - [Optional Arguments](#optional-arguments)
@@ -40,6 +42,16 @@ brew install ffmpeg
 # Install gifsicle
 brew install gifsicle
 ```
+
+## Installation via Homebrew (MacOS/Linux (x86_64) - x86_64/arm64)
+
+```bash
+brew install stenstromen/tap/video2gif
+```
+
+## Download the script
+
+- For **MacOS** and **Linux**: Checkout and download the latest binary from [Releases page](https://github.com/Stenstromen/video2gif/releases/latest/)
 
 ## Usage
 
@@ -99,7 +111,7 @@ brew install gifsicle
 # 480px wide (360px tall)
 ./video2gif -i "movie.mkv" -o "output.gif" -s 00:02:18 -e 00:02:20 -c 1440:1080:240:0 -w 480
 
-# 360px wide (270px tall)  
+# 360px wide (270px tall)
 ./video2gif -i "movie.mkv" -o "output.gif" -s 00:02:18 -e 00:02:20 -c 1440:1080:240:0 -w 360
 
 # 240px wide (180px tall) - very small

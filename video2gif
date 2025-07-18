@@ -1,0 +1,300 @@
+#!/bin/bash
+
+# Video to GIF Converter with Optimization
+# Usage: ./video2gif -i input.mkv -o output.gif [options]
+
+# Default values
+INPUT_FILE=""
+OUTPUT_FILE=""
+START_TIME="00:00:00"
+END_TIME=""
+DURATION=""
+FPS=10
+WIDTH=720
+HEIGHT=-1
+CROP=""
+OPTIMIZE_LEVEL=3
+LOSSY_LEVEL=100
+KEEP_TEMP=false
+ASPECT_RATIO=""
+VERSION="1.0.0"
+
+# Function to display help
+show_help() {
+    cat << EOF
+Video to GIF Converter with Optimization
+
+Usage: $0 -i INPUT_FILE -o OUTPUT_FILE [OPTIONS]
+
+Required:
+  -i, --input FILE      Input video file
+  -o, --output FILE     Output GIF file
+
+Optional:
+  -s, --start TIME      Start time (format: HH:MM:SS or SS, default: 00:00:00)
+  -e, --end TIME        End time (format: HH:MM:SS or SS)
+  -d, --duration TIME   Duration instead of end time (format: HH:MM:SS or SS)
+  -f, --fps NUM         Frame rate (default: 10)
+  -w, --width NUM       Width in pixels (default: 720)
+  -h, --height NUM      Height in pixels (default: auto-calculated)
+  -c, --crop WxH:X:Y    Crop video (format: width:height:x:y)
+  -a, --aspect RATIO    Aspect ratio (4:3, 16:9, etc.)
+  -ol, --opt-level NUM  Gifsicle optimization level 1-3 (default: 3)
+  -ll, --lossy NUM      Gifsicle lossy level 1-200 (default: 100)
+  -k, --keep-temp       Keep temporary files
+  --version             Show version information
+  --help                Show this help message
+
+Examples:
+  $0 -i video.mkv -o output.gif -s 00:10:38 -e 00:10:41
+  $0 -i video.mkv -o output.gif -s 30 -d 5 -f 15 -w 480
+  $0 -i video.mkv -o output.gif -s 00:10:38 -d 3 -a 4:3
+  $0 -i video.mkv -o output.gif -s 00:10:38 -d 3 -c 1440:1080:240:0
+EOF
+}
+
+# Function to log messages
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
+
+# Function to check if command exists
+check_command() {
+    if ! command -v "$1" &> /dev/null; then
+        log "ERROR: $1 is not installed. Please install it first."
+        exit 1
+    fi
+}
+
+# Function to parse time format
+parse_time() {
+    local time=$1
+    # If it's just a number, treat as seconds
+    if [[ $time =~ ^[0-9]+$ ]]; then
+        printf "%02d:%02d:%02d" $((time/3600)) $(((time%3600)/60)) $((time%60))
+    else
+        echo "$time"
+    fi
+}
+
+# Function to convert time to seconds
+time_to_seconds() {
+    local time=$1
+    if [[ $time =~ ^[0-9]+$ ]]; then
+        echo "$time"
+    else
+        echo "$time" | awk -F: '{ if (NF==1) print $1; else if (NF==2) print $1*60+$2; else print $1*3600+$2*60+$3 }'
+    fi
+}
+
+# Function to generate crop filter for aspect ratio
+generate_crop_filter() {
+    local aspect=$1
+    case $aspect in
+        "4:3")
+            echo "crop=1440:1080:240:0"
+            ;;
+        "16:9")
+            echo "crop=1920:1080:0:0"
+            ;;
+        *)
+            echo ""
+            ;;
+    esac
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -i|--input)
+            INPUT_FILE="$2"
+            shift 2
+            ;;
+        -o|--output)
+            OUTPUT_FILE="$2"
+            shift 2
+            ;;
+        -s|--start)
+            START_TIME="$2"
+            shift 2
+            ;;
+        -e|--end)
+            END_TIME="$2"
+            shift 2
+            ;;
+        -d|--duration)
+            DURATION="$2"
+            shift 2
+            ;;
+        -f|--fps)
+            FPS="$2"
+            shift 2
+            ;;
+        -w|--width)
+            WIDTH="$2"
+            shift 2
+            ;;
+        -h|--height)
+            HEIGHT="$2"
+            shift 2
+            ;;
+        -c|--crop)
+            CROP="$2"
+            shift 2
+            ;;
+        -a|--aspect)
+            ASPECT_RATIO="$2"
+            shift 2
+            ;;
+        -ol|--opt-level)
+            OPTIMIZE_LEVEL="$2"
+            shift 2
+            ;;
+        -ll|--lossy)
+            LOSSY_LEVEL="$2"
+            shift 2
+            ;;
+        -k|--keep-temp)
+            KEEP_TEMP=true
+            shift
+            ;;
+        --help)
+            show_help
+            exit 0
+            ;;
+        --version)
+            echo "video2gif version $VERSION"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+    esac
+done
+
+# Validate required arguments
+if [[ -z "$INPUT_FILE" || -z "$OUTPUT_FILE" ]]; then
+    echo "ERROR: Input and output files are required."
+    show_help
+    exit 1
+fi
+
+# Check if input file exists
+if [[ ! -f "$INPUT_FILE" ]]; then
+    log "ERROR: Input file '$INPUT_FILE' does not exist."
+    exit 1
+fi
+
+# Check required commands
+check_command "ffmpeg"
+check_command "gifsicle"
+
+# Parse time values
+START_TIME=$(parse_time "$START_TIME")
+
+# Calculate end time or duration
+if [[ -n "$END_TIME" ]]; then
+    END_TIME=$(parse_time "$END_TIME")
+elif [[ -n "$DURATION" ]]; then
+    start_seconds=$(time_to_seconds "$START_TIME")
+    duration_seconds=$(time_to_seconds "$DURATION")
+    end_seconds=$((start_seconds + duration_seconds))
+    END_TIME=$(printf "%02d:%02d:%02d" $((end_seconds/3600)) $(((end_seconds%3600)/60)) $((end_seconds%60)))
+else
+    log "ERROR: Either end time (-e) or duration (-d) must be specified."
+    exit 1
+fi
+
+# Generate temporary file names
+TEMP_DIR=$(mktemp -d)
+TEMP_SEGMENT="$TEMP_DIR/segment.mp4"
+TEMP_PALETTE="$TEMP_DIR/palette.png"
+TEMP_GIF="$TEMP_DIR/temp.gif"
+
+# Cleanup function
+cleanup() {
+    if [[ "$KEEP_TEMP" == false ]]; then
+        rm -rf "$TEMP_DIR"
+        log "Cleaned up temporary files"
+    else
+        log "Temporary files kept in: $TEMP_DIR"
+    fi
+}
+trap cleanup EXIT
+
+log "Starting video to GIF conversion..."
+log "Input: $INPUT_FILE"
+log "Output: $OUTPUT_FILE"
+log "Time range: $START_TIME to $END_TIME"
+log "FPS: $FPS"
+log "Resolution: ${WIDTH}x${HEIGHT}"
+
+# Step 1: Extract video segment
+log "Step 1: Extracting video segment..."
+ffmpeg -i "$INPUT_FILE" -ss "$START_TIME" -to "$END_TIME" -map 0:v -c:v libx264 -preset fast -crf 18 "$TEMP_SEGMENT" -y
+if [[ $? -ne 0 ]]; then
+    log "ERROR: Failed to extract video segment"
+    exit 1
+fi
+
+# Verify that the segment file was created and has content
+if [[ ! -f "$TEMP_SEGMENT" ]] || [[ ! -s "$TEMP_SEGMENT" ]]; then
+    log "ERROR: Video segment file is empty or was not created"
+    log "Check that the time range is valid for the input video"
+    exit 1
+fi
+
+# Build filter chain
+FILTER_CHAIN="fps=$FPS"
+
+# Add crop filter if specified
+if [[ -n "$CROP" ]]; then
+    FILTER_CHAIN="$FILTER_CHAIN,crop=$CROP"
+elif [[ -n "$ASPECT_RATIO" ]]; then
+    CROP_FILTER=$(generate_crop_filter "$ASPECT_RATIO")
+    if [[ -n "$CROP_FILTER" ]]; then
+        FILTER_CHAIN="$FILTER_CHAIN,$CROP_FILTER"
+    fi
+fi
+
+# Add scale filter
+FILTER_CHAIN="$FILTER_CHAIN,scale=${WIDTH}:${HEIGHT}:flags=lanczos"
+
+# Step 2: Generate palette
+log "Step 2: Generating palette..."
+ffmpeg -i "$TEMP_SEGMENT" -vf "$FILTER_CHAIN,palettegen" "$TEMP_PALETTE" -y
+if [[ $? -ne 0 ]]; then
+    log "ERROR: Failed to generate palette"
+    exit 1
+fi
+
+# Step 3: Generate GIF
+log "Step 3: Generating GIF..."
+ffmpeg -i "$TEMP_SEGMENT" -i "$TEMP_PALETTE" -filter_complex "$FILTER_CHAIN[x];[x][1:v]paletteuse" "$TEMP_GIF" -y
+if [[ $? -ne 0 ]]; then
+    log "ERROR: Failed to generate GIF"
+    exit 1
+fi
+
+# Step 4: Optimize GIF
+log "Step 4: Optimizing GIF..."
+gifsicle --optimize="$OPTIMIZE_LEVEL" --lossy="$LOSSY_LEVEL" -o "$OUTPUT_FILE" "$TEMP_GIF"
+if [[ $? -ne 0 ]]; then
+    log "ERROR: Failed to optimize GIF"
+    exit 1
+fi
+
+# Get file sizes
+ORIGINAL_SIZE=$(stat -f%z "$TEMP_GIF" 2>/dev/null || stat -c%s "$TEMP_GIF" 2>/dev/null || echo "unknown")
+OPTIMIZED_SIZE=$(stat -f%z "$OUTPUT_FILE" 2>/dev/null || stat -c%s "$OUTPUT_FILE" 2>/dev/null || echo "unknown")
+
+log "Conversion completed successfully!"
+log "Output file: $OUTPUT_FILE"
+if [[ "$ORIGINAL_SIZE" != "unknown" && "$OPTIMIZED_SIZE" != "unknown" ]]; then
+    REDUCTION=$((100 - (OPTIMIZED_SIZE * 100 / ORIGINAL_SIZE)))
+    log "File size: $(numfmt --to=iec $OPTIMIZED_SIZE) (reduced by ${REDUCTION}%)"
+else
+    log "File size: $(ls -lh "$OUTPUT_FILE" | awk '{print $5}')"
+fi 

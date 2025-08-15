@@ -1,10 +1,10 @@
-# Video to GIF Converter
+# video2gif, a Video to GIF Converter
 
-![Don't forget to flap your arms](./example.gif)
+![logo](./logo.webp)
 
 A comprehensive bash script that converts video files to optimized GIFs using ffmpeg and gifsicle.
 
-- [Video to GIF Converter](#video-to-gif-converter)
+- [video2gif, a Video to GIF Converter](#video2gif-a-video-to-gif-converter)
   - [Features](#features)
   - [Prerequisites](#prerequisites)
   - [Installation via Homebrew (MacOS/Linux (x86\_64) - x86\_64/arm64)](#installation-via-homebrew-macoslinux-x86_64---x86_64arm64)
@@ -170,3 +170,5 @@ You can adjust these settings using the `-ol` and `-ll` options for different qu
 ```
 
 The script handles all the intermediate steps (palette generation, optimization) automatically!
+
+![Don't forget to flap your arms](./example.gif)
